@@ -1,0 +1,167 @@
+<?php
+// @codingStandardsIgnoreFile
+
+/** @var $block \Magento\Catalog\Block\Product\View */
+?>
+<?php $_helper = $this->helper('WeltPixel\ProductPage\Helper\Data'); ?>
+<?php $selectMaxValue = $_helper->getQtySelectMaxValue(); ?>
+<?php $_product = $block->getProduct(); ?>
+<?php $buttonTitle = __('Add to Cart'); ?>
+<?php $addToCartClass = !$block->shouldRenderQuantity() ? 'full-width-btn' : ''; ?>
+<?php if ($_product->isSaleable()): ?>
+    <div class="box-tocart">
+        <div class="fieldset">
+            <?php if ($block->shouldRenderQuantity()): ?>
+                <div id="qtycounterwrapper" data-bind="scope: 'quantity'">
+                    <div class="field qty" style="margin-right:10px;">
+                        <div class="control">
+                            <button
+                                style="min-width:64px;"
+                                title="Decrease QTY"
+                                class="action primary tocart"
+                                type="button"
+                                data-bind="click: decrease"
+                            >-</button>
+                        </div>
+                    </div>
+                    <div class="field qty">
+                        <label class="label" for="qty"><span><?php /* @escapeNotVerified */ echo __('Qty') ?></span></label>
+                        <div class="control">
+                            <input
+                                id="qty"
+                                name="qty"
+                                type="number"
+                                class="input-text qty"
+                                title="<?php /* @escapeNotVerified */ echo __('Qty') ?>"
+                                value="<?php /* @escapeNotVerified */ echo $block->getProductDefaultQty() * 1 ?>"
+                                data-validate="<?php echo $block->escapeHtml(json_encode($block->getQuantityValidators())) ?>"
+                                data-bind="value: qty()" />
+                        </div>
+                    </div>
+                    <div class="field qty">
+                        <div class="control">
+                            <button
+                                style="min-width:64px;"
+                                title="Increase QTY"
+                                class="action primary tocart"
+                                type="button"
+                                data-bind="click: increase"
+                            >+</button>
+                        </div>
+                    </div>
+
+                    <div id="modal" style="display: none;">
+                        <div class="modal-body-content">
+                            <div class="labels col-xs-4">
+                                <p>Kode Produk</p>
+                                <p>Nama Produk</p>
+                                <p>Harga Produk</p>
+                                <p>QTY</p>
+                                <p>Sub Total</p>
+                            </div>
+                            <div class="values col-xs-8">
+                                <p><?= $_product->getId() ?></p>
+                                <p><?= $_product->getName() ?></p>
+                                <p><?= $_product->getPrice() ?></p>
+                                <p><span id="qtyModal"></span></p></p>
+                                <p><span id="myCartTotal"></span></p>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            <?php endif; ?>
+            <div class="<?php echo $_helper->getAddToCartBtnPosition() ;?>  <?php echo $addToCartClass; ?>"  style="margin-top:10px;">
+                <button type="submit"
+                        title="<?php /* @escapeNotVerified */ echo $buttonTitle ?>"
+                        class="action primary tocart"
+                        id="product-addtocart-button">
+                    <span><?php /* @escapeNotVerified */ echo $buttonTitle ?></span>
+                </button>
+                <?php echo $block->getChildHtml('', true) ?>
+            </div>
+        </div>
+    </div>
+<?php endif; ?>
+<?php if ($block->isRedirectToCartEnabled()) : ?>
+    <script type="text/x-magento-init">
+    {
+        "#product_addtocart_form": {
+            "Magento_Catalog/product/view/validation": {
+                "radioCheckboxClosest": ".nested"
+            }
+        }
+    }
+</script>
+<?php else : ?>
+    <script>
+        require([
+            'jquery',
+            "Magento_Ui/js/modal/modal",
+            'mage/mage',
+            'Magento_Catalog/product/view/validation',
+            'Magento_Catalog/js/catalog-add-to-cart'
+        ], function ($, modal) {
+            'use strict';
+
+            let options = {
+                type: 'popup',
+                responsive: true,
+                title: 'Konfirmasi',
+                buttons: [{
+                    text: $.mage.__('Cancel'),
+                    class: '',
+                    click: function () {
+                        this.closeModal();
+                    }
+                },
+                {
+                    text: $.mage.__('Ok'),
+                    class: '',
+                    click: function () {
+                        this.closeModal();
+
+                        var widget = $('#product_addtocart_form').catalogAddToCart({
+                            bindSubmit: false
+                        });
+
+                        widget.catalogAddToCart('submitForm', $('#product_addtocart_form'));
+                    }
+                }]
+            };
+
+            let popup = modal(options, $('#modal'));
+
+            $('#product_addtocart_form').mage('validation', {
+                radioCheckboxClosest: '.nested',
+                submitHandler: function (form) {
+                    $('#modal').modal('openModal');
+                    let qty = $('#qty').val();
+                    let price = "<?= $_product->getPrice() ?>";
+                    let subTotal = qty * price;
+                    $("#qtyModal").html(qty);
+                    $("#myCartTotal").html(subTotal);
+
+                    return false;
+                }
+            });
+        });
+    </script>
+<?php endif; ?>
+
+<script type="text/x-magento-init">
+    {
+        "*": {
+            "Magento_Ui/js/core/app": {
+                "components": {
+                    "quantity": {
+                        "component": "assessment/quantity",
+                        "defaultQty": <?php echo $block->getProductDefaultQty() * 1 ?>,
+                        "maxQty": <?php echo $selectMaxValue ?>,
+                        "minQty": 1
+                    }
+                 }
+            }
+        }
+    }
+</script>
